@@ -1,0 +1,117 @@
+---------------------------------------------------------------------------
+ValueError                                Traceback (most recent call last)
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/skl2onnx/common/_container.py:641, in ModelComponentContainer.add_node(self, op_type, inputs, outputs, op_domain, op_version, name, **attrs)
+    640 try:
+--> 641     node = make_node(op_type, inputs, outputs, name=name,
+    642                      _dtype=dtype, **attrs)
+    643 except ValueError as e:
+
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/skl2onnx/proto/onnx_helper_modified.py:67, in make_node(op_type, inputs, outputs, name, doc_string, domain, _dtype, **kwargs)
+     66 if kwargs:
+---> 67     node.attribute.extend(
+     68         make_attribute(key, value, dtype=_dtype, domain=domain)
+     69         for key, value in sorted(kwargs.items()))
+     70 return node
+
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/skl2onnx/proto/onnx_helper_modified.py:68, in <genexpr>(.0)
+     66 if kwargs:
+     67     node.attribute.extend(
+---> 68         make_attribute(key, value, dtype=_dtype, domain=domain)
+     69         for key, value in sorted(kwargs.items()))
+     70 return node
+
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/skl2onnx/proto/onnx_helper_modified.py:184, in make_attribute(key, value, dtype, domain, doc_string)
+    183     else:
+--> 184         raise ValueError(
+    185             "You passed in an iterable attribute but the type cannot "
+    186             "be figured out, key='{}', type={}, dtype={}, "
+    187             "types[:5]={} set(types)={}.".format(
+    188                 key, type(value), dtype,
+    189                 [type(_) for _, __ in zip(value, range(0, 5))],
+    190                 set(type(t) for t in value)))
+    191 else:
+
+ValueError: You passed in an iterable attribute but the type cannot be figured out, key='nodes_values', type=<class 'list'>, dtype=None, types[:5]=[<class 'float'>, <class 'float'>, <class 'float'>, <class 'float'>, <class 'float'>] set(types)={<class 'int'>, <class 'float'>}.
+
+The above exception was the direct cause of the following exception:
+
+ValueError                                Traceback (most recent call last)
+Input In [87], in <cell line: 1>()
+----> 1 onnx_model = to_onnx(lgbm_model, initial_types=[('feature_input', FloatTensorType([None, 2021]))],
+      2             options={WrappedLightGbmBoosterClassifier: {'zipmap': False}}, target_opset={'': 15, 'ai.onnx.ml': 2})
+
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/skl2onnx/convert.py:263, in to_onnx(model, X, name, initial_types, target_opset, options, white_op, black_op, final_types, dtype, naming, verbose)
+    261 if verbose >= 1:
+    262     print("[to_onnx] initial_types=%r" % initial_types)
+--> 263 return convert_sklearn(model, initial_types=initial_types,
+    264                        target_opset=target_opset,
+    265                        name=name, options=options,
+    266                        white_op=white_op, black_op=black_op,
+    267                        final_types=final_types, dtype=dtype,
+    268                        verbose=verbose, naming=naming)
+
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/skl2onnx/convert.py:184, in convert_sklearn(model, name, initial_types, doc_string, target_opset, custom_conversion_functions, custom_shape_calculators, custom_parsers, options, intermediate, white_op, black_op, final_types, dtype, naming, verbose)
+    182 if verbose >= 1:
+    183     print("[convert_sklearn] convert_topology")
+--> 184 onnx_model = convert_topology(
+    185     topology, name, doc_string, target_opset, options=options,
+    186     remove_identity=not intermediate, verbose=verbose)
+    187 if verbose >= 1:
+    188     print("[convert_sklearn] end")
+
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/skl2onnx/common/_topology.py:1421, in convert_topology(topology, model_name, doc_string, target_opset, channel_first_inputs, options, remove_identity, verbose)
+   1412 container = ModelComponentContainer(
+   1413     target_opset, options=options,
+   1414     registered_models=topology.registered_models,
+   1415     white_op=topology.raw_model._white_op,
+   1416     black_op=topology.raw_model._black_op,
+   1417     verbose=verbose)
+   1419 # Traverse the graph from roots to leaves
+   1420 # This loop could eventually be parallelized.
+-> 1421 topology.convert_operators(container=container, verbose=verbose)
+   1422 container.ensure_topological_order()
+   1424 if len(container.inputs) == 0:
+
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/skl2onnx/common/_topology.py:1256, in Topology.convert_operators(self, container, verbose)
+   1253     _check_variable_out_(variable, operator)
+   1255 self.call_shape_calculator(operator)
+-> 1256 self.call_converter(operator, container, verbose=verbose)
+   1258 # If an operator contains a sequence of operators,
+   1259 # output variables are not necessarily known at this stage.
+   1260 operator.init_status(is_evaluated=True)
+
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/skl2onnx/common/_topology.py:1062, in Topology.call_converter(self, operator, container, verbose)
+   1057     print("[call_converter] call converter for %r." % operator.type)
+   1058 logger.debug(
+   1059     "[Conv] call %r fed %r - %r", operator,
+   1060     "".join(str(i.is_fed) for i in operator.inputs),
+   1061     "".join(str(i.is_fed) for i in operator.outputs))
+-> 1062 conv(self.scopes[0], operator, container)
+   1063 logger.debug("[Conv] end - %r", operator)
+
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/skl2onnx/common/_registration.py:26, in RegisteredConverter.__call__(self, *args)
+     24     if args[1].raw_operator is not None:
+     25         args[2]._get_allowed_options(args[1].raw_operator)
+---> 26 return self._fct(*args)
+
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/onnxmltools/convert/lightgbm/operator_converters/LightGbm.py:519, in convert_lightgbm(scope, operator, container)
+    515 probability_tensor_name = scope.get_unique_variable_name(
+    516     'probability_tensor')
+    517 label_tensor_name = scope.get_unique_variable_name('label_tensor')
+--> 519 container.add_node(
+    520     'TreeEnsembleClassifier', operator.input_full_names,
+    521     [label_tensor_name, probability_tensor_name],
+    522     op_domain='ai.onnx.ml', **attrs)
+    524 prob_tensor = probability_tensor_name
+    526 if gbm_model.boosting_type == 'rf':
+
+File ~/jupyter_dir/jupyter_env/lib/python3.8/site-packages/skl2onnx/common/_container.py:644, in ModelComponentContainer.add_node(self, op_type, inputs, outputs, op_domain, op_version, name, **attrs)
+    641     node = make_node(op_type, inputs, outputs, name=name,
+    642                      _dtype=dtype, **attrs)
+    643 except ValueError as e:
+--> 644     raise ValueError("Unable to create node '{}' with name='{}'."
+    645                      "".format(op_type, name)) from e
+    646 node.domain = op_domain
+    648 self.node_domain_version_pair_sets.add((op_domain, op_version))
+
+ValueError: Unable to create node 'TreeEnsembleClassifier' with name='WrappedLightGbmBoosterClassifier'.
